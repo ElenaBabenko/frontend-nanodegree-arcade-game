@@ -80,7 +80,8 @@ var Engine = (function(global) {
      */
     function update(dt) {
         updateEntities(dt);
-        // checkCollisions();
+        checkCollisions();
+        checkWin();
     }
 
     /* This is called by the update function  and loops through all of the
@@ -95,6 +96,67 @@ var Engine = (function(global) {
             enemy.update(dt);
         });
         player.update();
+    }
+
+    // checking if enemy and player coordinates overlap
+    function checkCollisions() {
+
+        allEnemies.forEach(function (item, index, array) {
+
+            // arbitraty numbers to trim white space around player and
+            // enemy images and make collision visually more obvious
+            var trimLeft = 10,
+                trimRight = 90;
+
+            if (player.row == item['row'] &&
+                item['x'] + trimLeft < player.x + trimRight &&
+                item['x'] + trimRight > player.x + trimLeft) {
+
+                playerReset();
+            }
+        });
+    }
+
+    // sends player back to original position and flashes text
+    function playerReset() {
+        player.setInitalPosition();
+        tryAgain();
+    }
+
+    // flashes try again text
+    function tryAgain(){
+        textRender('Try again!',185);
+
+        // delays clearing canvas to allow text display for a second
+        setTimeout(function(){
+            ctx.clearRect(0,0,canvas.width,50);
+        }, 1000);
+    }
+
+    // function to display game feedback text
+    function textRender(textDisplay,textPosition){
+        ctx.font = '30px sans-serif';
+        ctx.fillStyle = 'red';
+        ctx.fillText(textDisplay, textPosition, 20);
+    }
+
+    // checking if player made it to the water row and won the game
+    function checkWin() {
+        if (player.row == 0) {
+            playerWin();
+        }
+    }
+
+    // sending player back to initial position and showing winning message
+    function playerWin() {
+        allEnemies.forEach(function (item, index, array) {
+            item['x'] = -100;
+            item['speed'] = 0;
+        });
+
+        player.setInitalPosition();
+
+        textRender('You won!', 195);
     }
 
     /* This function initially draws the "game level", it will then call
@@ -172,7 +234,8 @@ var Engine = (function(global) {
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-boy.png'
+        'images/char-boy.png',
+        'images/char-cat-girl.png'
     ]);
     Resources.onReady(init);
 

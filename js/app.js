@@ -1,16 +1,57 @@
+// ---- GAME class -----------------------------------
+// Sets up generic variables used in the various methods and functions throughout the game
+var Game = function() {
+    this.rowHeight = 83;
+    this.colWidth = 101;
+    this.numRows = 6;
+    this.numCols = 5;
+    this.fieldWidth = this.colWidth * this.numCols;
+    this.fieldHeight = this.colWidth * this.numRows;
+
+    this.generateActorCoordinates();
+
+};
+
+// Assigning location of the rows the enemies and player (actors in the game) will be running on
+Game.prototype.generateActorCoordinates = function() {
+
+    // creating an array of y coordinates corresponding with 6 rows
+    // row 0 - water, which player is trying to reach
+    // row 1-3 - stone, where bugs run
+    // row 4-5 - grass, where playes starts
+    this.actorRowCoord = [];
+
+    for (var i = 0; i < this.numRows; i++) {
+        // 63 px is an arbitrary number that corresponds with the y coordinate for the chosen actor images
+        // that seemed to visually positioning them in the center of a row
+        // by offsetting extra white space at the top of the image
+        // If you're changing the enemy image adjust this number accordingly
+        var actorImgTopOffset = 63;
+
+        this.actorRowCoord[i] = actorImgTopOffset + this.rowHeight * (this.actorRowCoord.length - 1);
+    }
+};
+
 // ----- ENEMY class and methods ---------------------
 // Enemies our player must avoid
-var Enemy = function(posY,speed) {
+var Enemy = function(row, speed) {
     // Variables applied to each of our instances go here,
     // we've provided one for you to get started
 
     // The image/sprite for our enemies, this uses
     // a helper we've provided to easily load images
     this.sprite = 'images/enemy-bug.png';
-    this.x = -95;
-    this.y = posY;
+
+    // offScreen number is arbitrary, corresponding with the right edge of the bug image
+    // If you're changing the enemy image adjust this number accordingly
+    this.offScreen = -100;
+    this.x = this.offScreen;
     this.speed = speed;
-}
+    this.row = row;
+    // setting y coordinates for bug rows
+    this.y = game.actorRowCoord[row];
+
+};
 
 // Update the enemy's position, required method for game
 // Parameter: dt, a time delta between ticks
@@ -21,68 +62,56 @@ Enemy.prototype.update = function(dt) {
     this.x = this.x + this.speed * dt;
 
     // when enemy gone off screen on the right restart it on the left
-    if (this.x > 505) {
-        this.x = -95;
+    if (this.x > game.fieldWidth) {
+        this.x = this.offScreen;
     }
-
-    // Assigning rows for later when determining collision with player
-    if (this.y == 63) {
-        this.row = 1;
-    } else if (this.y == 146) {
-        this.row = 2;
-    } else if (this.y == 229) {
-        this.row = 3;
-    }
-}
+};
 
 // Draw the enemy on the screen, required method for game
 Enemy.prototype.render = function() {
-        ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-}
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
 
 // ----- PLAYER class and methods ---------------------
 // Now write your own player class
 var Player = function() {
     this.sprite = 'images/char-cat-girl.png';
     this.setInitalPosition();
-}
+};
 
 // sets initial player position to come back to after position reset
 Player.prototype.setInitalPosition = function() {
-    this.x = 200;
-    this.y = 400;
-};
+    // since player image width is exactly the same as column width and the canvas is 5 columns
+    // that places the left edge (x coordinates) right at the end of the second column
+    // that is why I'm multiplying col width by 2 to arrive at player x coordinates
+    this.x = game.colWidth * 2;
 
+    // placing player on the 5th row
+    this.y = game.actorRowCoord[5];
+};
 
 // This class requires an update(), render() and
 // a handleInput() method.
 Player.prototype.update = function(direction) {
-// Defining player movement based on direction
-    if (direction == 'right' && this.x <= 303) {
-        this.x = this.x + 101;
-    } else if (direction == 'left' && this.x >= 0) {
-        this.x = this.x - 101;
-    } else if (direction == 'up' && this.y > 0) {
-        this.y = this.y - 83;
-    } else if (direction == 'down' && this.y != 400) {
-        this.y = this.y + 83;
+    // Defining player movement based on direction
+    // stop moving to the right if player x coord aligns with the right edge of the 4th column
+    // which means the player is in the rightmost, 5th column
+    if (direction == 'right' && this.x < game.colWidth * 4) {
+        this.x = this.x + game.colWidth;
+        // stop moving to the left if player x coord aligns with the left edge of the 1st column
+        // which means the player is in the leftmost column
+    } else if (direction == 'left' && this.x >= game.colWidth) {
+        this.x = this.x - game.colWidth;
+        // stop moving up if player y coord match those of row 0
+    } else if (direction == 'up' && this.y > game.actorRowCoord[0]) {
+        this.y = this.y - game.rowHeight;
+        // stop moving down if player y coord match those of row 5
+    } else if (direction == 'down' && this.y != game.actorRowCoord[5]) {
+        this.y = this.y + game.rowHeight;
     }
 
-// Assigning rows for later when determining collision with enemy
-    if (this.y == -15) {
-        this.row = 0;
-    } else if (this.y == 68) {
-        this.row = 1;
-    } else if (this.y == 151) {
-        this.row = 2;
-    } else if (this.y == 234) {
-        this.row = 3;
-    } else if (this.y == 317) {
-        this.row = 4;
-    } else if (this.y == 400) {
-        this.row = 5;
-    }
-
+    // Assigning rows for later when determining collision with enemy
+    this.row = game.actorRowCoord.indexOf(this.y);
 };
 
 
@@ -98,8 +127,11 @@ Player.prototype.handleInput = function(move) {
 
 
 // Now instantiate your objects.
+// Placing game object in a variable called game
+var game = new Game();
+
 // Place all enemy objects in an array called allEnemies
-var allEnemies = [new Enemy(63,40),new Enemy(63,200),new Enemy(146,20),new Enemy(229,80),new Enemy(146,150),new Enemy(229,80)];
+var allEnemies = [new Enemy(1, 40), new Enemy(1, 100), new Enemy(2, 20), new Enemy(2, 200), new Enemy(3, 80), new Enemy(3, 120)];
 
 // Place the player object in a variable called player
 var player = new Player();
